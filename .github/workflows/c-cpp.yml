@@ -16,6 +16,7 @@ jobs:
       - name: Set up Environment
         run: |
           mkdir -p build
+          # تحميل fishhook
           curl -L -o fishhook.zip https://github.com/facebook/fishhook/archive/refs/heads/master.zip
           unzip -q fishhook.zip
           find . -name "fishhook.c" -exec mv {} . \;
@@ -24,17 +25,18 @@ jobs:
 
       - name: Compile dylib
         run: |
-          # 🛠️ هذه الخطوة ضرورية لتحديد مكان أدوات iOS
           SDK_PATH=$(xcrun --sdk iphoneos --show-sdk-path)
           
-          # تجميع fishhook.c مع ملف الكود الخاص بك (ShadowEngine.mm)
+          # 🛠️ إضافة -framework UIKit هنا لربط المكتبات
           clang++ -arch arm64 -dynamiclib \
             -isysroot "$SDK_PATH" \
             -miphoneos-version-min=12.0 \
             -fobjc-arc \
             -I. \
             fishhook.c \
-            ShadowEngine.mm -o build/ShadowBreaker.dylib
+            ShadowEngine.mm -o build/ShadowBreaker.dylib \
+            -framework UIKit -framework Foundation
+          # ^--- تم إضافة frameworks هنا
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
