@@ -1,67 +1,55 @@
-name: build_sovereign_security_final_v12
+name: Build iOS dylib with Dobby
 
 on:
-  push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
   workflow_dispatch:
+  push:
+    branches: [ "main" ]
 
 jobs:
   build:
-    runs-on: macos-latest
+    runs-on: macos-14
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout Code
+        uses: actions/checkout@v4
 
-      - name: Setup Theos
+      - name: Set up Environment
         run: |
-          # تنظيف البيئة تماماً لضمان عدم وجود ملفات معطوبة
-          sudo rm -rf /opt/theos
-          sudo git clone --recursive https://github.com/theos/theos.git /opt/theos
-          echo "THEOS=/opt/theos" >> $GITHUB_ENV
-          echo "/opt/theos/bin" >> $GITHUB_PATH
+          mkdir -p build
+          # تحميل مكتبة Dobby (الإصدار الأخير)
+          curl -L -o dobby.zip https://github.com/jmpews/Dobby/archive/refs/heads/master.zip
+          unzip dobby.zip
+          mv Dobby-master/include/dobby.h .
+          # نحتاج إلى dobby.a، سنقوم ببنائه أو تحميله. للبساطة في Actions، سنبني الكود مباشرة مع ملفات dobby.c
+          cp -r Dobby-master/src dobby_src
+          rm -rf Dobby-master dobby.zip
 
-      - name: Install Dependencies
+      - name: Compile dylib
         run: |
-          brew install ldid
-          # تثبيت الـ SDKs الضرورية للبناء (بديل عن الصورة الخارجية)
-          sudo rm -rf /opt/theos/sdks
-          sudo git clone https://github.com/theos/sdks.git /opt/theos/sdks
-        
-      - name: Verify Project Files
-        run: |
-          # التحقق من وجود ملف libdobby.a في المجلد الرئيسي (ضروري للـ Makefile)
-          if [ -f "libdobby.a" ]; then
-            echo "libdobby.a found."
-          else
-            echo "::error::libdobby.a not found in root directory! Please add it."
-            exit 1
-          fi
-          # التحقق من وجود ملف الـ Plist للـ Filter (ضروري للـ Theos)
-          if [ -f "SovereignSecurity.plist" ]; then
-            echo "SovereignSecurity.plist found."
-          else
-            echo "::error::SovereignSecurity.plist missing! Please create it."
-            exit 1
-          fi
+          SDK_PATH=$(xcrun --sdk iphoneos --show-sdk-path)
+          
+          # تجميع ملفات dobby مع ملف الكود الخاص بك (افترضت أن اسم ملفك هو ShadowEngine.mm)
+          # إذا كان اسم ملفك مختلفاً، قم بتغيير ShadowEngine.mm أدناه
+          
+          clang++ -arch arm64 -dynamiclib \
+            -isysroot "$SDK_PATH" \
+            -miphoneos-version-min=12.0 \
+            -fobjc-arc \
+            -I. -Idobby_src \
+            dobby_src/dobby.c \
+            dobby_src/dobby_helper.c \
+            dobby_src/UserInterface/dobby_ui.c \
+            dobby_src/InstructionRelocator/arm64/arm64_instruction_relocator.c \
+            dobby_src/InstructionRelocator/arm64/arm64_relocator.c \
+            dobby_src/InstructionRelocator/arm64/arm64_instruction_relocator.c \
+            dobby_src/InstructionRelocator/arm64/arm64_relocator.c \
+            dobby_src/InstructionRelocator/arm64/arm64_instruction_relocator.c \
+            dobby_src/InstructionRelocator/arm64/arm64_relocator.c \
+            -framework Foundation -framework UIKit -framework Security \
+            ShadowEngine.mm -o build/ShadowBreaker.dylib
 
-      - name: Build SovereignSecurity
-        run: |
-          export THEOS=/opt/theos
-          # تنظيف البناء السابق لضمان نظافة الـ Symbols
-          make clean
-          # تنفيذ البناء بناءً على الـ Makefile الخاص بك
-          make package FINALPACKAGE=1
-        env:
-          THEOS: /opt/theos
-
-      - name: Upload Sovereign Artifacts
+      - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          # اسم المجلد المضغوط الناتج
-          name: SovereignSecurity-NonJB-Package
-          path: |
-            packages/*.deb
-            .theos/obj/debug/*.dylib
-            .theos/obj/*.dylib
+          name: ShadowBreaker_dylib
+          path: build/ShadowBreaker.dylib
