@@ -13,38 +13,40 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Set up Environment
+      - name: Set up Environment and Dobby
         run: |
           mkdir -p build
-          # تحميل مكتبة Dobby (الإصدار الأخير)
+          
+          # 1. تحميل Dobby
           curl -L -o dobby.zip https://github.com/jmpews/Dobby/archive/refs/heads/master.zip
-          unzip dobby.zip
-          mv Dobby-master/include/dobby.h .
-          # نحتاج إلى dobby.a، سنقوم ببنائه أو تحميله. للبساطة في Actions، سنبني الكود مباشرة مع ملفات dobby.c
-          cp -r Dobby-master/src dobby_src
-          rm -rf Dobby-master dobby.zip
+          unzip -q dobby.zip
+          
+          # 2. البحث عن مجلد src الفعلي داخل المستخرج
+          # عادة يكون Dobby-master/src
+          if [ -d "Dobby-master/src" ]; then
+            echo "Dobby src folder found."
+          else
+            echo "Error: Dobby src folder not found."
+            exit 1
+          fi
 
       - name: Compile dylib
         run: |
           SDK_PATH=$(xcrun --sdk iphoneos --show-sdk-path)
           
-          # تجميع ملفات dobby مع ملف الكود الخاص بك (افترضت أن اسم ملفك هو ShadowEngine.mm)
-          # إذا كان اسم ملفك مختلفاً، قم بتغيير ShadowEngine.mm أدناه
+          # 3. تجميع ملفات dobby مع ملف الكود الخاص بك (ShadowEngine.mm)
+          # ملاحظة: تأكد أن ملف ShadowEngine.mm موجود في المجلد الرئيسي للمستودع
           
           clang++ -arch arm64 -dynamiclib \
             -isysroot "$SDK_PATH" \
             -miphoneos-version-min=12.0 \
             -fobjc-arc \
-            -I. -Idobby_src \
-            dobby_src/dobby.c \
-            dobby_src/dobby_helper.c \
-            dobby_src/UserInterface/dobby_ui.c \
-            dobby_src/InstructionRelocator/arm64/arm64_instruction_relocator.c \
-            dobby_src/InstructionRelocator/arm64/arm64_relocator.c \
-            dobby_src/InstructionRelocator/arm64/arm64_instruction_relocator.c \
-            dobby_src/InstructionRelocator/arm64/arm64_relocator.c \
-            dobby_src/InstructionRelocator/arm64/arm64_instruction_relocator.c \
-            dobby_src/InstructionRelocator/arm64/arm64_relocator.c \
+            -I. -IDobby-master/include \
+            Dobby-master/src/dobby.c \
+            Dobby-master/src/dobby_helper.c \
+            Dobby-master/src/UserInterface/dobby_ui.c \
+            Dobby-master/src/InstructionRelocator/arm64/arm64_instruction_relocator.c \
+            Dobby-master/src/InstructionRelocator/arm64/arm64_relocator.c \
             -framework Foundation -framework UIKit -framework Security \
             ShadowEngine.mm -o build/ShadowBreaker.dylib
 
