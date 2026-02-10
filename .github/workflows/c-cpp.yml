@@ -17,16 +17,17 @@ jobs:
         run: |
           mkdir -p build
           
-          # 1. تحميل Dobby
+          # 1. تحميل Dobby من المستودع الرسمي
           curl -L -o dobby.zip https://github.com/jmpews/Dobby/archive/refs/heads/master.zip
           unzip -q dobby.zip
+          mv Dobby-master Dobby
           
-          # 2. البحث عن مجلد src الفعلي داخل المستخرج
-          # عادة يكون Dobby-master/src
-          if [ -d "Dobby-master/src" ]; then
+          # 2. التأكد من المسارات
+          if [ -d "Dobby/src" ]; then
             echo "Dobby src folder found."
           else
-            echo "Error: Dobby src folder not found."
+            echo "Error: Dobby src folder not found. Listing files:"
+            ls -R Dobby
             exit 1
           fi
 
@@ -41,12 +42,12 @@ jobs:
             -isysroot "$SDK_PATH" \
             -miphoneos-version-min=12.0 \
             -fobjc-arc \
-            -I. -IDobby-master/include \
-            Dobby-master/src/dobby.c \
-            Dobby-master/src/dobby_helper.c \
-            Dobby-master/src/UserInterface/dobby_ui.c \
-            Dobby-master/src/InstructionRelocator/arm64/arm64_instruction_relocator.c \
-            Dobby-master/src/InstructionRelocator/arm64/arm64_relocator.c \
+            -I. -IDobby/include \
+            Dobby/src/dobby.c \
+            Dobby/src/dobby_helper.c \
+            Dobby/src/UserInterface/dobby_ui.c \
+            Dobby/src/InstructionRelocator/arm64/arm64_instruction_relocator.c \
+            Dobby/src/InstructionRelocator/arm64/arm64_relocator.c \
             -framework Foundation -framework UIKit -framework Security \
             ShadowEngine.mm -o build/ShadowBreaker.dylib
 
