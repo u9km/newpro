@@ -1,4 +1,4 @@
-name: build_sovereign_security_final_non_jb
+name: build_sovereign_security_final
 
 on:
   push:
@@ -9,47 +9,45 @@ on:
 
 jobs:
   build:
-    runs-on: macos-latest # نستخدم macOS لأنه أسهل لتثبيت أدوات Apple
-
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
-
-      - name: Install Theos & Dependencies
+      
+      - name: Setup Theos
         run: |
-          # تثبيت أدوات Apple الضرورية
+          # تثبيت Theos في مسار توافقي مع نظام macOS
+          sudo git clone --recursive https://github.com/theos/theos.git /opt/theos
+          
+      - name: Install Dependencies
+        run: |
           brew install ldid
-          
-          # تثبيت Theos يدوياً
-          git clone --recursive https://github.com/theos/theos.git ~/theos
-          
-      - name: Setup iOS SDK
-        run: |
-          # تحميل الـ SDKs الضرورية للبناء (بديل عن الصورة الخارجية)
-          git clone https://github.com/theos/sdks.git ~/theos/sdks
+          # تثبيت SDKs الضرورية للبناء
+          sudo git clone https://github.com/theos/sdks.git /opt/theos/sdks
         
-      - name: Verify Project Files
+      - name: Check for libdobby.a
         run: |
-          # التأكد من وجود ملف libdobby.a
+          # التحقق من وجود المكتبة المطلوبة في الـ Makefile الخاص بك
           if [ -f "libdobby.a" ]; then
             echo "libdobby.a found."
           else
-            echo "::error::libdobby.a not found in root directory!"
+            echo "::error::libdobby.a not found! Please add it to the root directory."
             exit 1
           fi
 
       - name: Build SovereignSecurity
         run: |
-          export THEOS=~/theos
-          # تنظيف وبناء المشروع
-          make clean
-          make package FINALPACKAGE=1
+          # تصدير متغير البيئة Theos ليعرف Makefile مكانه
+          export THEOS=/opt/theos
+          # تنفيذ البناء
+          /opt/theos/bin/make package FINALPACKAGE=1
         env:
-          THEOS: ~/theos
+          THEOS: /opt/theos
 
       - name: Upload Sovereign Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: SovereignSecurity-NonJB-Package
+          # اسم المجلد المضغوط الناتج
+          name: SovereignSecurity-Full-Package
           path: |
             packages/*.deb
             .theos/obj/debug/*.dylib
