@@ -1,50 +1,23 @@
-name: Build SovereignSecurity v5
-
-on:
-  push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
-  workflow_dispatch:
-
+name: build_sovereign_v41_final
+on: [push]
 jobs:
   build:
     runs-on: macos-latest
-
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-        with:
-          submodules: recursive
-
+      - uses: actions/checkout@v4
       - name: Setup Theos
+        run: git clone --recursive https://github.com/theos/theos.git ~/theos
+      - name: Install Dependencies
+        run: brew install ldid # حل مشكلة command not found
+      - name: Build Sovereign V41
         run: |
-          sudo git clone --recursive https://github.com/theos/theos.git /opt/theos
-          echo "THEOS=/opt/theos" >> $GITHUB_ENV
-          echo "/opt/theos/bin" >> $GITHUB_PATH
-
-      - name: Setup iOS SDK
-        run: |
-          git clone https://github.com/theos/sdks.git $THEOS/sdks
-
-      - name: Check for libdobby.a
-        run: |
-          if [ -f "libdobby.a" ]; then
-            echo "libdobby.a found."
-          else
-            echo "::error::libdobby.a not found! Please add it to the root directory."
-            exit 1
-          fi
-
-      - name: Build Package
-        run: |
-          make package FINALPACKAGE=1
-        env:
-          THEOS: /opt/theos
-
-      - name: Upload Artifact
-        # تم تحديثه إلى النسخة v4 بناءً على الخطأ
-        uses: actions/upload-artifact@v4
+          export THEOS=~/theos
+          make package
+      - name: Upload Sovereign Artifacts
+        uses: actions/upload-artifact@v4 # حل مشكلة deprecated version
         with:
-          name: SovereignSecurity_DEB
-          path: packages/*.deb
+          name: SovereignV41-Full-Package
+          path: |
+            packages/*.deb
+            .theos/obj/debug/*.dylib
+            .theos/obj/*.dylib
