@@ -1,4 +1,4 @@
-name: build_sovereign_security_final
+name: build_sovereign_security_final_v6
 
 on:
   push:
@@ -14,32 +14,44 @@ jobs:
       - uses: actions/checkout@v4
       
       - name: Setup Theos
-        run: git clone --recursive https://github.com/theos/theos.git ~/theos
+        run: |
+          sudo git clone --recursive https://github.com/theos/theos.git /opt/theos
+          echo "THEOS=/opt/theos" >> $GITHUB_ENV
+          echo "/opt/theos/bin" >> $GITHUB_PATH
       
       - name: Install Dependencies
-        run: brew install ldid
-        
-      - name: Check for libdobby.a
         run: |
+          brew install ldid
+          sudo git clone https://github.com/theos/sdks.git /opt/theos/sdks
+        
+      - name: Verify Project Files
+        run: |
+          # التأكد من وجود ملفات المصدر الضرورية
+          if [ ! -f "SovereignSecurity.m" ] || [ ! -f "fishhook.c" ]; then
+            echo "::error::Source files (.m or .c) missing!"
+            exit 1
+          fi
+          # التأكد من وجود مكتبة Dobby
           if [ -f "libdobby.a" ]; then
             echo "libdobby.a found."
           else
-            echo "::error::libdobby.a not found! Please add it to the root directory."
+            echo "::error::libdobby.a not found in root directory! Please add it."
             exit 1
           fi
 
       - name: Build SovereignSecurity
         run: |
-          export THEOS=~/theos
-          # تنفيذ البناء بناءً على الـ Makefile الخاص بك
+          export THEOS=/opt/theos
+          # تنظيف أي بقايا بنائية قديمة
+          make clean
+          # تنفيذ البناء مع إظهار تفاصيل الربط
           make package FINALPACKAGE=1
         env:
-          THEOS: ~/theos
+          THEOS: /opt/theos
 
       - name: Upload Sovereign Artifacts
         uses: actions/upload-artifact@v4
         with:
-          # اسم المجلد المضغوط الناتج
           name: SovereignSecurity-Full-Package
           path: |
             packages/*.deb
