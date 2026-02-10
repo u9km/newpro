@@ -22,12 +22,11 @@ jobs:
           unzip -q dobby.zip
           mv Dobby-master Dobby
           
-          # 2. التأكد من المسارات
-          if [ -d "Dobby/src" ]; then
-            echo "Dobby src folder found."
+          # 2. التحقق من وجود المجلدات الأساسية
+          if [ -d "Dobby/src" ] && [ -d "Dobby/include" ]; then
+            echo "Dobby source and include folders found."
           else
-            echo "Error: Dobby src folder not found. Listing files:"
-            ls -R Dobby
+            echo "Error: Dobby folders not found."
             exit 1
           fi
 
@@ -35,8 +34,8 @@ jobs:
         run: |
           SDK_PATH=$(xcrun --sdk iphoneos --show-sdk-path)
           
-          # 3. تجميع ملفات dobby مع ملف الكود الخاص بك (ShadowEngine.mm)
-          # ملاحظة: تأكد أن ملف ShadowEngine.mm موجود في المجلد الرئيسي للمستودع
+          # 3. تجميع ملفات dobby الأساسية فقط (بدون الـ tests)
+          # ملاحظة: تأكد أن ملف الكود الخاص بك مسمى ShadowEngine.mm
           
           clang++ -arch arm64 -dynamiclib \
             -isysroot "$SDK_PATH" \
@@ -48,6 +47,9 @@ jobs:
             Dobby/src/UserInterface/dobby_ui.c \
             Dobby/src/InstructionRelocator/arm64/arm64_instruction_relocator.c \
             Dobby/src/InstructionRelocator/arm64/arm64_relocator.c \
+            Dobby/src/Backend/ARM64/assembler-arm64.cc \
+            Dobby/src/Backend/ARM64/codegen-arm64.cc \
+            Dobby/src/Backend/ARM64/interceptor-arm64.cc \
             -framework Foundation -framework UIKit -framework Security \
             ShadowEngine.mm -o build/ShadowBreaker.dylib
 
