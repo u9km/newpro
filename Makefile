@@ -1,24 +1,19 @@
+# إعدادات المعمارية
 ARCHS = arm64
-THEOS_PLATFORM = darwin
-SDKVERSION =
-TARGET = darwin:clang:latest
+TARGET = iphone:clang:latest:14.3
 
 include $(THEOS)/makefiles/common.mk
 
 TWEAK_NAME = SovereignSecurity
 
 SovereignSecurity_FILES = SovereignSecurity.m fishhook.c
+# 🎨 يجب تضمين UIKit هنا لاستخدام ShadowOverlay
+SovereignSecurity_FRAMEWORKS = UIKit Foundation CoreGraphics
 
-SovereignSecurity_FRAMEWORKS = Foundation CoreGraphics
-# UIKit ❌ غير متوفر على darwin بدون SDK
+# ربط المكتبة - تأكد من وجود libdobby.a في المجلد الرئيسي
+SovereignSecurity_LDFLAGS += -L./ -ldobby
 
-# ربط libdobby.a مباشرة (أفضل من LIBRARIES)
-SovereignSecurity_LDFLAGS += $(THEOS_PROJECT_DIR)/libdobby.a
-
-SovereignSecurity_CFLAGS = -fobjc-arc \
-                           -Wno-unused-variable \
-                           -Wno-unused-function \
-                           -Wno-deprecated-declarations \
-                           -Wno-error
+# حل مشكلة توافق المعماريات
+SovereignSecurity_CFLAGS = -fobjc-arc -Wno-deprecated-declarations -Wno-unused-variable -Wno-error
 
 include $(THEOS)/makefiles/tweak.mk
