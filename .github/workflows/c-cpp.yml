@@ -19,15 +19,28 @@ jobs:
           # تحميل fishhook
           curl -L -o fishhook.zip https://github.com/facebook/fishhook/archive/refs/heads/master.zip
           unzip -q fishhook.zip
-          mv fishhook-master/fishhook.c .
-          mv fishhook-master/fishhook.h .
-          rm -rf fishhook-master fishhook.zip
+          
+          # 🛠️ البحث عن ملفات fishhook ونقلها للمجلد الرئيسي بغض النظر عن اسم المجلد المستخرج
+          find . -name "fishhook.c" -exec mv {} . \;
+          find . -name "fishhook.h" -exec mv {} . \;
+          
+          # تنظيف الملفات المؤقتة
+          rm -rf fishhook.zip
+          
+          # التحقق من وجود الملفات
+          if [ -f "fishhook.c" ] && [ -f "fishhook.h" ]; then
+            echo "Fishhook files found."
+          else
+            echo "Error: Fishhook files not found."
+            ls -R # لعرض الملفات والمساعدة في التشخيص
+            exit 1
+          fi
 
       - name: Compile dylib
         run: |
           SDK_PATH=$(xcrun --sdk iphoneos --show-sdk-path)
           
-          # 🛠️ تجميع fishhook.c مع ملف الكود الخاص بك
+          # تجميع fishhook.c مع ملف الكود الخاص بك
           clang++ -arch arm64 -dynamiclib \
             -isysroot "$SDK_PATH" \
             -miphoneos-version-min=12.0 \
