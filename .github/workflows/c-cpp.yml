@@ -1,4 +1,4 @@
-name: Build iOS dylib with Local Dobby
+name: Build iOS dylib with Fishhook
 
 on:
   workflow_dispatch:
@@ -13,24 +13,29 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Compile dylib
+      - name: Set up Environment
         run: |
           mkdir -p build
+          # تحميل fishhook
+          curl -L -o fishhook.zip https://github.com/facebook/fishhook/archive/refs/heads/master.zip
+          unzip -q fishhook.zip
+          mv fishhook-master/fishhook.c .
+          mv fishhook-master/fishhook.h .
+          rm -rf fishhook-master fishhook.zip
+
+      - name: Compile dylib
+        run: |
           SDK_PATH=$(xcrun --sdk iphoneos --show-sdk-path)
           
-          # تأكد من أن الملفات موجودة في المستودع:
-          # - ShadowEngine.mm (كودك)
-          # - dobby.h
-          # - libdobby.a
-          
+          # 🛠️ تجميع fishhook.c مع ملف الكود الخاص بك
           clang++ -arch arm64 -dynamiclib \
             -isysroot "$SDK_PATH" \
             -miphoneos-version-min=12.0 \
             -fobjc-arc \
             -I. \
-            libdobby.a \
-            -framework Foundation -framework UIKit -framework Security \
-            ShadowEngine.mm -o build/ShadowBreaker.dylib
+            fishhook.c \
+            ShadowEngine.mm -o build/ShadowBreaker.dylib                
+          # ^--- تأكد أن ملف الكود الخاص بك مسمى ShadowEngine.mm
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
