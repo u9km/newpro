@@ -9,33 +9,42 @@ on:
 
 jobs:
   build:
-    # نستخدم بيئة Linux لأنها أسرع وأسهل لتشغيل Docker
-    runs-on: ubuntu-latest
-    
-    # استخدام صورة Docker تحتوي على Theos و iOS SDK جاهزة
-    container:
-      image: theos/theos:latest
+    runs-on: macos-latest # نستخدم macOS لأنه أسهل لتثبيت أدوات Apple
 
     steps:
       - uses: actions/checkout@v4
-      
+
+      - name: Install Theos & Dependencies
+        run: |
+          # تثبيت أدوات Apple الضرورية
+          brew install ldid
+          
+          # تثبيت Theos يدوياً
+          git clone --recursive https://github.com/theos/theos.git ~/theos
+          
+      - name: Setup iOS SDK
+        run: |
+          # تحميل الـ SDKs الضرورية للبناء (بديل عن الصورة الخارجية)
+          git clone https://github.com/theos/sdks.git ~/theos/sdks
+        
       - name: Verify Project Files
         run: |
+          # التأكد من وجود ملف libdobby.a
           if [ -f "libdobby.a" ]; then
             echo "libdobby.a found."
           else
-            echo "::error::libdobby.a not found in root directory! Please add it."
+            echo "::error::libdobby.a not found in root directory!"
             exit 1
           fi
 
       - name: Build SovereignSecurity
         run: |
-          # تنظيف أي بقايا بنائية
+          export THEOS=~/theos
+          # تنظيف وبناء المشروع
           make clean
-          # تنفيذ البناء مع إظهار تفاصيل الربط
           make package FINALPACKAGE=1
         env:
-          THEOS: /opt/theos
+          THEOS: ~/theos
 
       - name: Upload Sovereign Artifacts
         uses: actions/upload-artifact@v4
