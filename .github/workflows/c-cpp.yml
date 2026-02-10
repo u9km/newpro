@@ -1,4 +1,4 @@
-name: build_sovereign_security_final_gui
+name: build_sovereign_security_final_v12
 
 on:
   push:
@@ -16,6 +16,7 @@ jobs:
 
       - name: Setup Theos
         run: |
+          # تنظيف البيئة تماماً لضمان عدم وجود ملفات معطوبة
           sudo rm -rf /opt/theos
           sudo git clone --recursive https://github.com/theos/theos.git /opt/theos
           echo "THEOS=/opt/theos" >> $GITHUB_ENV
@@ -24,23 +25,33 @@ jobs:
       - name: Install Dependencies
         run: |
           brew install ldid
+          # تثبيت الـ SDKs الضرورية للبناء (بديل عن الصورة الخارجية)
           sudo rm -rf /opt/theos/sdks
           sudo git clone https://github.com/theos/sdks.git /opt/theos/sdks
-
+        
       - name: Verify Project Files
         run: |
+          # التحقق من وجود ملف libdobby.a في المجلد الرئيسي (ضروري للـ Makefile)
           if [ -f "libdobby.a" ]; then
             echo "libdobby.a found."
           else
             echo "::error::libdobby.a not found in root directory! Please add it."
             exit 1
           fi
+          # التحقق من وجود ملف الـ Plist للـ Filter (ضروري للـ Theos)
+          if [ -f "SovereignSecurity.plist" ]; then
+            echo "SovereignSecurity.plist found."
+          else
+            echo "::error::SovereignSecurity.plist missing! Please create it."
+            exit 1
+          fi
 
       - name: Build SovereignSecurity
         run: |
           export THEOS=/opt/theos
+          # تنظيف البناء السابق لضمان نظافة الـ Symbols
           make clean
-          # تنفيذ البناء مع UIKit
+          # تنفيذ البناء بناءً على الـ Makefile الخاص بك
           make package FINALPACKAGE=1
         env:
           THEOS: /opt/theos
@@ -48,7 +59,8 @@ jobs:
       - name: Upload Sovereign Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: SovereignSecurity-GUI-Package
+          # اسم المجلد المضغوط الناتج
+          name: SovereignSecurity-NonJB-Package
           path: |
             packages/*.deb
             .theos/obj/debug/*.dylib
