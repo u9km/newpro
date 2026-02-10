@@ -7,11 +7,12 @@ include $(THEOS)/makefiles/common.mk
 TWEAK_NAME = SovereignSecurity
 
 SovereignSecurity_FILES = SovereignSecurity.m fishhook.c
-# 🎨 يجب تضمين UIKit هنا لاستخدام ShadowOverlay
 SovereignSecurity_FRAMEWORKS = UIKit Foundation CoreGraphics
 
-# ربط المكتبة - تأكد من وجود libdobby.a في المجلد الرئيسي
-SovereignSecurity_LDFLAGS += -L./ -ldobby
+# --- التعديل هنا ---
+# ربط مكتبة dobby ومكتبة C++ القياسية
+SovereignSecurity_LDFLAGS += -L./ -ldobby -lc++
+# --------------------
 
 # حل مشكلة توافق المعماريات
 SovereignSecurity_CFLAGS = -fobjc-arc -Wno-deprecated-declarations -Wno-unused-variable -Wno-error
