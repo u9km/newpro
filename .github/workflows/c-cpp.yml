@@ -1,4 +1,4 @@
-name: Build SovereignSecurity v4
+name: Build SovereignSecurity v5
 
 on:
   push:
@@ -25,12 +25,10 @@ jobs:
 
       - name: Setup iOS SDK
         run: |
-          # تنزيل SDKs لتوافق البناء
           git clone https://github.com/theos/sdks.git $THEOS/sdks
 
       - name: Check for libdobby.a
         run: |
-          # التحقق من وجود المكتبة المطلوبة في Makefile
           if [ -f "libdobby.a" ]; then
             echo "libdobby.a found."
           else
@@ -40,13 +38,13 @@ jobs:
 
       - name: Build Package
         run: |
-          # تنفيذ عملية البناء
           make package FINALPACKAGE=1
         env:
           THEOS: /opt/theos
 
       - name: Upload Artifact
-        uses: actions/upload-artifact@v3
+        # تم تحديثه إلى النسخة v4 بناءً على الخطأ
+        uses: actions/upload-artifact@v4
         with:
           name: SovereignSecurity_DEB
           path: packages/*.deb
