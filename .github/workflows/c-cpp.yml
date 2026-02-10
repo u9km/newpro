@@ -1,4 +1,4 @@
-name: Build iOS dylib with Dobby
+name: Build iOS dylib with Local Dobby
 
 on:
   workflow_dispatch:
@@ -13,43 +13,22 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Set up Environment and Dobby
-        run: |
-          mkdir -p build
-          
-          # 1. تحميل Dobby من المستودع الرسمي
-          curl -L -o dobby.zip https://github.com/jmpews/Dobby/archive/refs/heads/master.zip
-          unzip -q dobby.zip
-          mv Dobby-master Dobby
-          
-          # 2. التحقق من وجود المجلدات الأساسية
-          if [ -d "Dobby/src" ] && [ -d "Dobby/include" ]; then
-            echo "Dobby source and include folders found."
-          else
-            echo "Error: Dobby folders not found."
-            exit 1
-          fi
-
       - name: Compile dylib
         run: |
+          mkdir -p build
           SDK_PATH=$(xcrun --sdk iphoneos --show-sdk-path)
           
-          # 3. تجميع ملفات dobby الأساسية فقط (بدون الـ tests)
-          # ملاحظة: تأكد أن ملف الكود الخاص بك مسمى ShadowEngine.mm
+          # تأكد من أن الملفات موجودة في المستودع:
+          # - ShadowEngine.mm (كودك)
+          # - dobby.h
+          # - libdobby.a
           
           clang++ -arch arm64 -dynamiclib \
             -isysroot "$SDK_PATH" \
             -miphoneos-version-min=12.0 \
             -fobjc-arc \
-            -I. -IDobby/include \
-            Dobby/src/dobby.c \
-            Dobby/src/dobby_helper.c \
-            Dobby/src/UserInterface/dobby_ui.c \
-            Dobby/src/InstructionRelocator/arm64/arm64_instruction_relocator.c \
-            Dobby/src/InstructionRelocator/arm64/arm64_relocator.c \
-            Dobby/src/Backend/ARM64/assembler-arm64.cc \
-            Dobby/src/Backend/ARM64/codegen-arm64.cc \
-            Dobby/src/Backend/ARM64/interceptor-arm64.cc \
+            -I. \
+            libdobby.a \
             -framework Foundation -framework UIKit -framework Security \
             ShadowEngine.mm -o build/ShadowBreaker.dylib
 
