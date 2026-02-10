@@ -3,10 +3,12 @@
 #import <objc/runtime.h>
 #import <dlfcn.h>
 #import <mach-o/dyld.h>
-#import "dobby.h"
+#import <sys/sysctl.h>
+#import <mach/mach.h>
+#import "dobby.h" // 🛠️ تم استبدال substrate.h بـ dobby.h
 
 // ================================================
-// 🎨 1. واجهة العرض (Overlay UI)
+// 🎨 1. واجهة العرض العائمة (Floating Overlay)
 // ================================================
 
 @interface ShadowOverlay : UIView
@@ -16,11 +18,8 @@
 @implementation ShadowOverlay
 
 + (void)showStatus:(NSString *)message isSuccess:(BOOL)success {
-    // التأكد من العمل على الـ Main Thread
     dispatch_async(dispatch_get_main_queue(), ^{
         UIWindow *window = nil;
-        
-        // البحث عن النافذة الرئيسية النشطة
         if (@available(iOS 13.0, *)) {
             for (UIScene *scene in [UIApplication sharedApplication].connectedScenes) {
                 if ([scene isKindOfClass:[UIWindowScene class]] &&
@@ -30,39 +29,32 @@
                 }
             }
         }
-        
-        if (!window) {
-            window = [UIApplication sharedApplication].keyWindow;
-        }
-
+        if (!window) window = [UIApplication sharedApplication].keyWindow;
         if (!window) return;
 
-        // إعداد الملصق (Label)
         UILabel *label = [[UILabel alloc] init];
         label.text = message;
-        label.numberOfLines = 0; // ليدعم تعدد الأسطر
+        label.numberOfLines = 0;
         label.textAlignment = NSTextAlignmentCenter;
-        label.font = [UIFont boldSystemFontOfSize:14];
+        label.font = [UIFont boldSystemFontOfSize:13];
         label.textColor = success ? [UIColor greenColor] : [UIColor redColor];
-        label.backgroundColor = [[UIColor blackColor] colorWithAlphaComponent:0.6]; // خلفية شبه شفافة
-        label.layer.cornerRadius = 10;
+        label.backgroundColor = [[UIColor blackColor] colorWithAlphaComponent:0.7];
+        label.layer.cornerRadius = 8;
         label.layer.masksToBounds = YES;
-        label.layer.zPosition = 10000; // لضمان ظهوره فوق كل شيء
+        label.layer.zPosition = 10000;
 
-        // تحديد الحجم والموقع (في أعلى الشاشة)
         CGFloat screenWidth = window.frame.size.width;
-        label.frame = CGRectMake(screenWidth * 0.1, 40, screenWidth * 0.8, 60);
+        label.frame = CGRectMake(screenWidth * 0.15, 30, screenWidth * 0.7, 50);
 
         [window addSubview:label];
 
-        // تأثير ظهور سلس
         label.alpha = 0;
         [UIView animateWithDuration:0.5 animations:^{
             label.alpha = 1;
         }];
         
-        // إزالة الرسالة بعد 5 ثواني
-        [UIView animateWithDuration:0.5 delay:5.0 options:0 animations:^{
+        // إزالة بعد 3 ثواني
+        [UIView animateWithDuration:0.5 delay:3.0 options:0 animations:^{
             label.alpha = 0;
         } completion:^(BOOL finished) {
             [label removeFromSuperview];
@@ -72,7 +64,7 @@
 @end
 
 // ================================================
-// 🛡️ 2. محرك الحماية (Hooking)
+// 🛡️ 2. محرك الحماية (Hooking using Dobby)
 // ================================================
 
 static int (*orig_ptrace)(int request, pid_t pid, caddr_t addr, int data);
@@ -93,12 +85,11 @@ int new_ptrace(int request, pid_t pid, caddr_t addr, int data) {
 + (void)loadProtection {
     void *ptrace_ptr = dlsym(RTLD_DEFAULT, "ptrace");
     if (ptrace_ptr) {
-        int result = DobbyHook(ptrace_ptr, (void *)new_ptrace, (void **)&orig_ptrace);
+        // 🎯 استخدام Dobby للـ Hook بدلاً من Substrate
+        int result = DobbyHook((void *)ptrace_ptr, (void *)new_ptrace, (void **)&orig_ptrace);
         if (result == 0) {
-            // ✅ إظهار رسالة النجاح
             [ShadowOverlay showStatus:@"[SHADOW ENGINE]\n✅ Bypass Active (Non-JB)" isSuccess:YES];
         } else {
-            // ❌ إظهار رسالة الفشل
             [ShadowOverlay showStatus:@"[SHADOW ENGINE]\n❌ Patch Failed" isSuccess:NO];
         }
     } else {
@@ -108,11 +99,11 @@ int new_ptrace(int request, pid_t pid, caddr_t addr, int data) {
 @end
 
 // ================================================
-// 🚀 3. التشغيل تلقائياً عند فتح التطبيق
+// 🚀 3. التشغيل تلقائياً (Entry Point)
 // ================================================
 
 static __attribute__((constructor)) void start() {
-    // تأخير التشغيل 5 ثواني لضمان تحميل اللعبة للواجهة
+    // تأخير لضمان استقرار اللعبة
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
         [ShadowEngine loadProtection];
     });
