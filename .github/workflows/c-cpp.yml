@@ -1,4 +1,4 @@
-name: Build SovereignSecurity
+name: Build SovereignSecurity v4
 
 on:
   push:
@@ -21,22 +21,29 @@ jobs:
         run: |
           sudo git clone --recursive https://github.com/theos/theos.git /opt/theos
           echo "THEOS=/opt/theos" >> $GITHUB_ENV
+          echo "/opt/theos/bin" >> $GITHUB_PATH
 
       - name: Setup iOS SDK
         run: |
+          # تنزيل SDKs لتوافق البناء
           git clone https://github.com/theos/sdks.git $THEOS/sdks
-          # نستخدم SDK 14.5 كبديل مستقر لـ 14.3 المذكور في Makefile
-          
-      - name: Prepare Dobby Library
+
+      - name: Check for libdobby.a
         run: |
-          # الكود يبحث عن libdobby.a في المجلد الرئيسي بناءً على Makefile الخاص بك
-          # تأكد من أن ملف المكتبة مرفوع في مشروعك أو سيتم فشل البناء
-          ls -R . 
+          # التحقق من وجود المكتبة المطلوبة في Makefile
+          if [ -f "libdobby.a" ]; then
+            echo "libdobby.a found."
+          else
+            echo "::error::libdobby.a not found! Please add it to the root directory."
+            exit 1
+          fi
 
       - name: Build Package
         run: |
-          export THEOS=/opt/theos
+          # تنفيذ عملية البناء
           make package FINALPACKAGE=1
+        env:
+          THEOS: /opt/theos
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v3
