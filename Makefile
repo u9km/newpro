@@ -1,5 +1,3 @@
-export THEOS=/var/mobile/theos
-
 # إعدادات المعمارية - ركز على arm64 للبدء
 ARCHS = arm64 
 TARGET = iphone:clang:latest:14.3
