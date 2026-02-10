@@ -1,4 +1,4 @@
-name: build_sovereign_security_final
+name: build_sovereign_security_final_gui
 
 on:
   push:
@@ -10,44 +10,45 @@ on:
 jobs:
   build:
     runs-on: macos-latest
+
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Setup Theos
         run: |
-          # تثبيت Theos في مسار توافقي مع نظام macOS
+          sudo rm -rf /opt/theos
           sudo git clone --recursive https://github.com/theos/theos.git /opt/theos
-          
+          echo "THEOS=/opt/theos" >> $GITHUB_ENV
+          echo "/opt/theos/bin" >> $GITHUB_PATH
+
       - name: Install Dependencies
         run: |
           brew install ldid
-          # تثبيت SDKs الضرورية للبناء
+          sudo rm -rf /opt/theos/sdks
           sudo git clone https://github.com/theos/sdks.git /opt/theos/sdks
-        
-      - name: Check for libdobby.a
+
+      - name: Verify Project Files
         run: |
-          # التحقق من وجود المكتبة المطلوبة في الـ Makefile الخاص بك
           if [ -f "libdobby.a" ]; then
             echo "libdobby.a found."
           else
-            echo "::error::libdobby.a not found! Please add it to the root directory."
+            echo "::error::libdobby.a not found in root directory! Please add it."
             exit 1
           fi
 
       - name: Build SovereignSecurity
         run: |
-          # تصدير متغير البيئة Theos ليعرف Makefile مكانه
           export THEOS=/opt/theos
-          # تنفيذ البناء
-          /opt/theos/bin/make package FINALPACKAGE=1
+          make clean
+          # تنفيذ البناء مع UIKit
+          make package FINALPACKAGE=1
         env:
           THEOS: /opt/theos
 
       - name: Upload Sovereign Artifacts
         uses: actions/upload-artifact@v4
         with:
-          # اسم المجلد المضغوط الناتج
-          name: SovereignSecurity-Full-Package
+          name: SovereignSecurity-GUI-Package
           path: |
             packages/*.deb
             .theos/obj/debug/*.dylib
